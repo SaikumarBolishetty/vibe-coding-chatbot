@@ -1,9 +1,18 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import requests
 import os
+import io
+import base64
+from PIL import Image
+try:
+    import pytesseract
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
+    print("⚠️  pytesseract not installed - OCR features will be limited")
 from openai import OpenAI
 from typing import Optional
 from rag_service import get_rag_service
@@ -183,6 +192,108 @@ async def get_document_count():
         return {"count": count}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error getting document count: {str(e)}")
+
+def extract_text_from_image(image_bytes: bytes) -> str:
+    """Extract text from image using OCR"""
+    try:
+        # Open image using PIL
+        image = Image.open(io.BytesIO(image_bytes))
+        
+        # Convert to RGB if necessary
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Extract text using pytesseract (if available)
+        if TESSERACT_AVAILABLE:
+            try:
+                text = pytesseract.image_to_string(image)
+                return (text or "").strip()
+            except Exception as e:
+                print(f"OCR error: {e}")
+                return ""
+        else:
+            return ""
+    except Exception as e:
+        print(f"Error processing image: {e}")
+        return ""
+
+def analyze_food_image(image_bytes: bytes) -> str:
+    """Analyze food image and return nutrition information"""
+    try:
+        # Extract text from image (nutrition labels, etc.)
+        extracted_text = extract_text_from_image(image_bytes)
+        
+        # Convert image to base64 for OpenAI vision API
+        image = Image.open(io.BytesIO(image_bytes))
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Save to bytes buffer
+        buffer = io.BytesIO()
+        image.save(buffer, format='JPEG')
+        image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        # Use OpenAI Vision API if available
+        if openai_client:
+            try:
+                response = openai_client.chat.completions.create(
+                    model="gpt-4o",
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": "You are NutriVibe, a nutrition expert. Analyze this food image and provide detailed nutritional information. If you can see a nutrition label, extract the exact values. If not, estimate based on the food items visible. Be specific about calories, protein, carbs, fat, and other relevant nutrients. Format your response clearly with emojis and bullet points."
+                        },
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": f"Please analyze this food image and provide detailed nutritional information. If there's text in the image, here's what I extracted: '{extracted_text}'. Use this information along with visual analysis to provide accurate nutrition details."
+                                },
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:image/jpeg;base64,{image_base64}"
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    max_tokens=500,
+                    temperature=0.3
+                )
+                return response.choices[0].message.content
+            except Exception as e:
+                print(f"Error with OpenAI Vision API: {e}")
+                # Fall back to text-based analysis
+        
+        # Fallback analysis based on extracted text
+        if extracted_text:
+            return f"📸 **Image Analysis Results**\n\nI found the following text in your image:\n\n```\n{extracted_text}\n```\n\nTo get detailed nutrition analysis, please set your OPENAI_API_KEY environment variable for full image recognition capabilities."
+        else:
+            return "📸 **Image Analysis Results**\n\nI couldn't extract any text from your image. To get detailed nutrition analysis with food recognition, please set your OPENAI_API_KEY environment variable for full image recognition capabilities."
+            
+    except Exception as e:
+        return f"❌ Error analyzing image: {str(e)}"
+
+@app.post("/analyze-image")
+async def analyze_image(image: UploadFile = File(...)):
+    """Analyze food image and return nutrition information"""
+    try:
+        # Validate file type
+        if not image.content_type or not image.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="File must be an image")
+        
+        # Read image bytes
+        image_bytes = await image.read()
+        
+        # Analyze the image
+        analysis = analyze_food_image(image_bytes)
+        
+        return {"analysis": analysis}
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error analyzing image: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

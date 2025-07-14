@@ -582,7 +582,7 @@
     <div class="footer-bar">
       <button onclick="openModal('settings-modal')">⚙️ Settings</button>
       <button onclick="openModal('resources-modal')">📚 Knowledge Base</button>
-      <button onclick="openModal('upload-modal')">⬆️ Upload Document</button>
+      <button onclick="openModal('upload-modal')">📸 Analyze Food Image</button>
     </div>
 
     <!-- Powered by Footer -->
@@ -622,12 +622,15 @@
   <div class="modal" id="upload-modal">
     <div class="modal-content">
       <button class="close" onclick="closeModal('upload-modal')">&times;</button>
-      <h2>⬆️ Upload Document</h2>
+      <h2>📸 Analyze Food Image</h2>
       <form id="upload-form">
-        <input type="file" id="file-input" accept=".pdf,.txt,.md,.docx" required />
-        <button type="submit">Upload to Knowledge Base</button>
+        <input type="file" id="file-input" accept=".jpg,.jpeg,.png,.gif,.bmp,.webp" required />
+        <button type="submit">Analyze Nutrition</button>
       </form>
       <div id="upload-status"></div>
+      <div id="image-preview" style="display: none; margin-top: 1rem; text-align: center;">
+        <img id="preview-img" style="max-width: 100%; max-height: 200px; border-radius: 0.5rem;" />
+      </div>
     </div>
   </div>
 
@@ -746,7 +749,28 @@
         });
     }
 
-    // Upload functionality
+    // Image preview functionality
+    const fileInput = document.getElementById('file-input');
+    const imagePreview = document.getElementById('image-preview');
+    const previewImg = document.getElementById('preview-img');
+    
+    if (fileInput) {
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            previewImg.src = e.target.result;
+            imagePreview.style.display = 'block';
+          };
+          reader.readAsDataURL(file);
+        } else {
+          imagePreview.style.display = 'none';
+        }
+      });
+    }
+
+    // Image analysis functionality
     const uploadForm = document.getElementById('upload-form');
     if (uploadForm) {
       uploadForm.addEventListener('submit', async (e) => {
@@ -757,24 +781,33 @@
         if (!fileInput.files.length) return;
 
         const formData = new FormData();
-        formData.append('file', fileInput.files[0]);
+        formData.append('image', fileInput.files[0]);
         
-        statusDiv.textContent = '📤 Uploading your nutrition document...';
+        statusDiv.textContent = '🔍 Analyzing your food image...';
         
         try {
-          const res = await fetch('/documents', {
+          const res = await fetch('/analyze-image', {
             method: 'POST',
             body: formData
           });
           
           if (res.ok) {
-            statusDiv.textContent = '✅ Document uploaded successfully! It\'s now part of your knowledge base.';
+            const data = await res.json();
+            statusDiv.textContent = '✅ Analysis complete! Check the chat for nutrition details.';
+            
+            // Add the analysis result to the chat
+            addMessage(`📸 **Food Analysis Results:**\n\n${data.analysis}`, 'bot');
+            
+            // Close modal and reset
+            closeModal('upload-modal');
             fileInput.value = '';
+            imagePreview.style.display = 'none';
           } else {
-            statusDiv.textContent = '❌ Upload failed. Please try again.';
+            const errorData = await res.json();
+            statusDiv.textContent = `❌ Analysis failed: ${errorData.detail || 'Unknown error'}`;
           }
         } catch (error) {
-          statusDiv.textContent = '❌ Upload failed. Please check your connection and try again.';
+          statusDiv.textContent = '❌ Analysis failed. Please check your connection and try again.';
         }
       });
     }

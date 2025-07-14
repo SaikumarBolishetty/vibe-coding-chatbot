@@ -1,11 +1,12 @@
-# Vibe AI Assistant with RAG - FastAPI
+# NutriVibe - AI Nutrition Assistant
 
-A powerful AI chatbot application built with FastAPI that provides an interactive AI assistant with Retrieval-Augmented Generation (RAG) capabilities.
+A powerful AI nutrition assistant built with FastAPI that provides interactive nutrition guidance with Retrieval-Augmented Generation (RAG) capabilities and **food image analysis**.
 
 ## Features
 
-- 🎨 **Beautiful UI**: Modern, responsive chatbot interface
-- 🤖 **AI Chatbot**: Interactive AI assistant powered by ChatGPT
+- 🎨 **Beautiful UI**: Modern, responsive nutrition assistant interface
+- 🤖 **AI Nutrition Assistant**: Interactive AI powered by ChatGPT
+- 📸 **Food Image Analysis**: Upload food images for nutrition info with OCR and AI vision
 - 🔍 **RAG Integration**: Vector search with managed Milvus for enhanced responses
 - 📱 **Mobile Responsive**: Works on all devices
 - ⚡ **Fast Performance**: Built with FastAPI
@@ -29,6 +30,20 @@ pip install -r requirements.txt
    ```
    OPENAI_API_KEY=your_api_key_here
    ```
+
+3. **For Image Analysis (Optional):**
+   - Install Tesseract OCR for text extraction from images:
+   ```bash
+   # macOS
+   brew install tesseract
+   
+   # Ubuntu/Debian
+   sudo apt-get install tesseract-ocr
+   
+   # Windows
+   # Download from: https://github.com/UB-Mannheim/tesseract/wiki
+   ```
+   - The app will work without Tesseract, but OCR features will be limited
 
 3. **For RAG Integration with Managed Milvus:**
    - Get your managed Milvus cluster credentials (host, port, user, password)
@@ -63,6 +78,7 @@ Once running, you can access:
 - **Document Management**: http://localhost:8000/documents (POST)
 - **Document Search**: http://localhost:8000/documents/search (GET)
 - **Document Count**: http://localhost:8000/documents/count (GET)
+- **Image Analysis**: http://localhost:8000/analyze-image (POST)
 - **Interactive API docs**: http://localhost:8000/docs
 - **Alternative API docs**: http://localhost:8000/redoc
 
@@ -74,12 +90,14 @@ Once running, you can access:
 - `POST /documents` - Add documents to vector database
 - `GET /documents/search` - Search documents in vector database
 - `GET /documents/count` - Get document count in vector database
+- `POST /analyze-image` - Analyze food images for nutrition information
 
 ## Usage
 
 1. Open http://localhost:8000/ in your browser
-2. Type your questions in the chat interface
-3. The chatbot will respond with enhanced information using RAG
+2. Type your nutrition questions in the chat interface
+3. Upload food images using the "📸 Analyze Food Image" button
+4. The assistant will respond with enhanced nutrition information using RAG
 
 ## Example API Usage
 
@@ -87,7 +105,13 @@ Once running, you can access:
 ```bash
 curl -X POST "http://localhost:8000/ask" \
      -H "Content-Type: application/json" \
-     -d '{"message": "What is FastAPI?"}'
+     -d '{"question": "What are the macros in chicken breast?", "rag": true}'
+```
+
+### Analyze Food Image
+```bash
+curl -X POST "http://localhost:8000/analyze-image" \
+     -F "image=@your_food_image.jpg"
 ```
 
 ### Add Documents
