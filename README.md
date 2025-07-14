@@ -6,11 +6,11 @@ A powerful AI chatbot application built with FastAPI that provides an interactiv
 
 - 🎨 **Beautiful UI**: Modern, responsive chatbot interface
 - 🤖 **AI Chatbot**: Interactive AI assistant powered by ChatGPT
-- 🔍 **RAG Integration**: Vector search with Milvus for enhanced responses
+- 🔍 **RAG Integration**: Vector search with managed Milvus for enhanced responses
 - 📱 **Mobile Responsive**: Works on all devices
 - ⚡ **Fast Performance**: Built with FastAPI
 - 📚 **Auto Documentation**: Interactive API docs
-- 🗄️ **Vector Database**: Milvus integration for semantic search
+- 🗄️ **Vector Database**: Managed Milvus integration for semantic search
 
 ## Setup
 
@@ -19,7 +19,7 @@ A powerful AI chatbot application built with FastAPI that provides an interactiv
 pip install -r requirements.txt
 ```
 
-2. **For ChatGPT Integration (Optional):**
+2. **For ChatGPT Integration:**
    - Get an OpenAI API key from [https://platform.openai.com/api-keys](https://platform.openai.com/api-keys)
    - Set the environment variable:
    ```bash
@@ -30,13 +30,16 @@ pip install -r requirements.txt
    OPENAI_API_KEY=your_api_key_here
    ```
 
-3. **For RAG Integration (Optional):**
-   - Install Docker and Docker Compose
-   - Start Milvus vector database:
-   ```bash
-   docker-compose up -d
+3. **For RAG Integration with Managed Milvus:**
+   - Get your managed Milvus cluster credentials (host, port, user, password)
+   - Add these to your `.env` file:
    ```
-   - Wait for Milvus to be ready (check logs: `docker-compose logs -f`)
+   MILVUS_HOST=your-managed-milvus-host
+   MILVUS_PORT=your-managed-milvus-port
+   MILVUS_USER=your-milvus-username
+   MILVUS_PASSWORD=your-milvus-password
+   MILVUS_SECURE=true
+   ```
 
 ## Running the Application
 
